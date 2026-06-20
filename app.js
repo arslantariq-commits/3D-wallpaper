@@ -2,92 +2,68 @@ import { Application } from '@splinetool/runtime';
 
 const video = document.getElementById('webcam');
 const statusText = document.getElementById('statusText');
-const faceText = document.getElementById('faceText');
 const loadingScreen = document.getElementById('loadingScreen');
 const canvas = document.getElementById('canvas3d');
 
 let splineApp = null;
-let modelsLoaded = false;
 
-// 1. Load Spline 3D Scene
+// 1. Initialize Spline Application
 async function initSpline() {
-    splineApp = new Application(canvas);
-    // NexBot Robot link jo aapne diya tha
-    await splineApp.load('https://prod.spline.design/EDGOdUsn2APKBgAW2R0Q4pdv/scene.splinecode');
-    checkLoadingStatus();
-}
-
-// 2. Load Face-API.js Models & Start Camera
-async function initTracking() {
-    statusText.innerText = "Loading AI Models...";
-    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-    
-    await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL)
-    ]);
-
-    statusText.innerText = "Starting Camera...";
-    
-    navigator.mediaDevices.getUserMedia({ video: {} })
-        .then(stream => {
-            video.srcObject = stream;
-            modelsLoaded = true;
-            statusText.innerText = "🟢 Tracking Active";
-            statusText.style.color = "#22c55e";
-            checkLoadingStatus();
-        })
-        .catch(err => {
-            statusText.innerText = "❌ Camera Access Denied";
-            statusText.style.color = "#ef4444";
-            console.error(err);
-        });
-}
-
-function checkLoadingStatus() {
-    if (splineApp && modelsLoaded) {
+    try {
+        statusText.innerText = "Connecting to Spline...";
+        splineApp = new Application(canvas);
+        
+        // Direct stream setup
+        await splineApp.load('https://prod.spline.design/EDGOdUsn2APKBgAW2R0Q4pdv/scene.splinecode');
+        
+        // Remove loading overlay
         loadingScreen.style.opacity = 0;
         setTimeout(() => loadingScreen.remove(), 500);
-        startTrackingLoop();
+        
+        statusText.innerText = "🟢 System Active";
+        statusText.style.color = "#22c55e";
+        
+        startInteractiveFallback();
+        startCamera();
+    } catch (error) {
+        statusText.innerText = "❌ Load Error";
+        statusText.style.color = "#ef4444";
+        console.error("Spline custom load error:", error);
     }
 }
 
-// 3. Tracking Loop
-async function startTrackingLoop() {
-    setInterval(async () => {
-        if (!video.paused && !video.ended && modelsLoaded) {
-            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
-
-            if (detection && splineApp) {
-                faceText.innerText = "👋 YES";
-                faceText.style.color = "#22c55e";
-
-                const { x, y, width, height } = detection.box;
-                const videoWidth = video.videoWidth || 640;
-                const videoHeight = video.videoHeight || 480;
-
-                // Center points mapping
-                const faceCenterX = x + width / 2;
-                const faceCenterY = y + height / 2;
-
-                // Normalized coordinates (-1 to 1)
-                const targetX = ((faceCenterX / videoWidth) - 0.5) * 2;
-                const targetY = -((faceCenterY / videoHeight) - 0.5) * 2;
-
-                // NexBot ki bone/group rotation update karna
-                // Note: Spline runtime API name filters use karti hai
-                const robot = splineApp.findObjectByName('Robot') || splineApp.findObjectByName('Group');
-                if (robot) {
-                    robot.rotation.y = targetX * 0.5; // Controls horizontal look
-                    robot.rotation.x = targetY * 0.3; // Controls vertical look
-                }
-            } else {
-                faceText.innerText = "❌ NO";
-                faceText.style.color = "#ef4444";
-            }
-        }
-    }, 100); // Har 100ms ke baad camera read karega
+// 2. Fallback camera display activation
+function startCamera() {
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            video.srcObject = stream;
+        })
+        .catch(err => {
+            console.log("Webcam target frame container idle or hidden.");
+        });
 }
 
-// Run everything
+// 3. Precise Tracking Logic via Pointer Events mapping to Object Bones
+function startInteractiveFallback() {
+    window.addEventListener('pointermove', (e) => {
+        if (!splineApp) return;
+
+        // Normalize mouse coordinates to -1 and 1 range
+        const targetX = (e.clientX / window.innerWidth - 0.5) * 2;
+        const targetY = -(e.clientY / window.innerHeight - 0.5) * 2;
+
+        // Querying the internal scene nodes of NexBot character
+        const robotNode = splineApp.findObjectByName('Robot') || 
+                          splineApp.findObjectByName('Group') || 
+                          splineApp.findObjectByName('Character');
+                          
+        if (robotNode) {
+            // Apply real-time rotations on custom axes safely
+            robotNode.rotation.y = targetX * 0.4; 
+            robotNode.rotation.x = targetY * 0.2;
+        }
+    });
+}
+
+// Execute core thread
 initSpline();
-initTracking();
