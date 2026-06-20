@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexBot Live AI Wallpaper</title>
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script type="importmap">
         {
             "imports": {
@@ -52,6 +51,7 @@
             border: 2px solid #a855f7;
             transform: scaleX(-1);
             z-index: 10;
+            background: #000;
         }
         .loading-overlay {
             position: absolute;
@@ -73,12 +73,12 @@
 <body>
 
     <div class="loading-overlay" id="loadingScreen">
-        🤖 Loading NexBot AI & Face Tracker...
+        🤖 Loading NexBot 3D Scene...
     </div>
 
     <div class="status-panel">
         <div>Status: <span id="statusText" style="color: #f59e0b;">Initializing...</span></div>
-        <div>Face Detected: <span id="faceText" style="color: #ef4444;">No</span></div>
+        <div>Interaction: <span style="color: #38bdf8;">Mouse tracking enabled</span></div>
     </div>
 
     <video id="webcam" autoplay muted playsinline></video>
